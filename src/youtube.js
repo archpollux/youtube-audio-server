@@ -8,9 +8,9 @@ const Ffmpeg = require('fluent-ffmpeg')
 const cache = {}
 
 class YouTube {
-  constructor () {
+  constructor (tempFolder=null) {
     this.pageSize = 10
-    this.tempFolder = path.resolve(__dirname, '../temp-audio')
+    this.tempFolder = tempFolder || path.resolve(__dirname, '../temp-audio')
     console.log('TEMP AUDIO FOLDER:', this.tempFolder)
     mkdirp(this.tempFolder) // Create temp folder if it doesn't exist.
 
@@ -56,23 +56,23 @@ class YouTube {
     const ffmpeg = new Ffmpeg(video)
     const stream = through2()
 
-    try {
-      ffmpeg
-        .format('mp3')
-        .on('end', () => {
-          cache[id] = null
-          ffmpeg.kill()
-        })
-        .pipe(
-          stream,
-          { end: true }
-        )
+    ffmpeg
+      .format('mp3')
+      .on('end', () => {
+        cache[id] = null
+        ffmpeg.kill()
+      })
+      .on('error', e => {
+        console.log('GOT ERROR', e);
+        stream.end();
+      })
+      .pipe(
+        stream,
+        { end: true }
+      )
 
-      cache[id] = stream
-      return stream
-    } catch (e) {
-      throw e
-    }
+    cache[id] = stream
+    return stream
   }
 
   download ({ id, file }, callback) {
@@ -115,4 +115,4 @@ class YouTube {
   }
 }
 
-module.exports = new YouTube()
+module.exports = YouTube;

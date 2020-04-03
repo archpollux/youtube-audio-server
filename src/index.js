@@ -2,11 +2,12 @@
 const path = require('path')
 const express = require('express')
 const nofavicon = require('express-no-favicons')
-const youtube = require('./youtube')
+const YouTube = require('./youtube')
 const downloader = require('./downloader')
-const app = express()
 
-function listen (port, callback = () => {}) {
+function getApp(tempDir) {
+  const youtube = new YouTube(tempDir);
+  const app = express()
   app.use(nofavicon())
 
   app.get('/', (req, res) => {
@@ -23,8 +24,7 @@ function listen (port, callback = () => {}) {
         res.sendFile(file)
       })
     } catch (e) {
-      console.error(e)
-      res.sendStatus(500, e)
+      res.status(500).send(e)
     }
   })
 
@@ -34,8 +34,8 @@ function listen (port, callback = () => {}) {
     try {
       youtube.stream(videoId).pipe(res)
     } catch (e) {
-      console.error(e)
-      res.sendStatus(500, e)
+      console.error('GOT STREAM ERROR', e)
+      res.status(500).send(e)
     }
   })
 
@@ -45,8 +45,8 @@ function listen (port, callback = () => {}) {
     try {
       youtube.stream(videoId, true).pipe(res)
     } catch (e) {
-      console.error(e)
-      res.sendStatus(500, e)
+      console.error('GOT ERROR', e)
+      res.status(500).send(e)
     }
   })
 
@@ -55,7 +55,7 @@ function listen (port, callback = () => {}) {
     youtube.search({ query, page }, (err, data) => {
       if (err) {
         console.log(err)
-        res.sendStatus(500, err)
+        res.status(500).send(err)
         return
       }
 
@@ -81,11 +81,17 @@ function listen (port, callback = () => {}) {
     res.sendStatus(404)
   })
 
+  return app;
+}
+
+function listen (port, callback = () => {}) {
+  const app = getApp();
   app.listen(port, callback)
 }
 
 module.exports = {
   listen,
+  getApp,
   downloader,
   get: (id, callback) => youtube.get(id, callback),
   search: ({ query, page }, callback) => youtube.search({ query, page }, callback),
